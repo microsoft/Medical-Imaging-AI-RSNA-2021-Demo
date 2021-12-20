@@ -50,6 +50,6 @@ The [explain.ipynb](./explain.ipynb) Notebook demonstrates:
 
 * How to use integrate [SHAP](https://shap-lrjball.readthedocs.io/en/latest/generated/shap.DeepExplainer.html) and [M3d-Cam](https://github.com/MECLabTUDA/M3d-Cam) from trained Deep Learning models.
 * How to load a trained model from a run directly into your code
-* How to access data directly from the datastore (after the [1.Load Data](../1.Load%20Data/Readme.md) step). 
+* How to access data directly from the datastore (after the [1.Load Data](../1.Load%20Data/README.md) step). 
 
 ![Explainability](./images/explainability_shap.png)

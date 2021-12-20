@@ -31,7 +31,7 @@ The next steps include:
 Here, we cover how to annotate your medical imaging dataset using tools built into the Azure ML Studio. Note that in this demo, the actual training will use the labels available with our sample dataset so that you won't have to manually label all the images. But we will show you how to leverage existing labels and those that you create through the annotation tool. 
 3. [Build a model from the annotated dataset](3.Build%20a%20model/Readme.md)  
 In this portion we will show you how to set up your compute resources and then use Notebooks feature of the Azure ML Studio to submit an experiment, resulting in a machine learning model that is capable of analyzing XRay images.
-4. [Deploy the model as a RESTful endpoint and perform explainability analysis](4.Deploy%20the%20model/Readme.md)<br>
+4. [Deploy the model as a RESTful endpoint and perform explainability analysis](4.Deploy%20the%20model/README.md)<br>
  Finally, we will demonstrate how to deploy a model so that it's ready for inferencing, and then how to use this model to gain insights into how the model is making predictions. 
 
 # Ask us about

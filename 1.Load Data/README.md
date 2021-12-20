@@ -82,7 +82,7 @@ azcopy copy "<local/path>" "<blob SAS url>" --recursive
 
 
 ## Next Steps
-Now you are ready to [annotate your data](../2.Annotation/Readme.md)!
+Now you are ready to [annotate your data](../2.Annotation/README.md)!
 
 
 ## Appendix - Uploading only a portion of PADCHEST
