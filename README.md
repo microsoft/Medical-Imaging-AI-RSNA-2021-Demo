@@ -63,3 +63,17 @@ We are working on an advanced annotation tool that provides more ways of annotat
 Here are some learning materials if you would like to explore some of the Microsoft's AI tools further: 
 * [A 30 day challenge](https://docs.microsoft.com/en-us/learn/challenges?id=8E1F62A7-99E3-48E4-9EC9-1FFFB99EE9AF&wt.mc_id=cloudskillschallenge_8E1F62A7-99E3-48E4-9EC9-1FFFB99EE9AF)  focusing on learning AI fundamentals
 * [Interactive introduction into Azure ML](https://docs.microsoft.com/en-us/learn/modules/intro-to-azure-ml/)
+
+# Contributing
+
+This project welcomes contributions and suggestions.  Most contributions require you to agree to a
+Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
+the rights to use your contribution. For details, visit https://cla.microsoft.com.
+
+When you submit a pull request, a CLA-bot will automatically determine whether you need to provide
+a CLA and decorate the PR appropriately (e.g., label, comment). Simply follow the instructions
+provided by the bot. You will only need to do this once across all repositories using our CLA.
+
+These are the ways to contribute:
+* [Submit bugs](https://github.com/microsoft/Medical-Imaging-AI-RSNA-2021-Demo/issues) and help us verify fixes as they are checked in.
+* Review the [source code changes](https://github.com/microsoft/Medical-Imaging-AI-RSNA-2021-Demo/pulls).
