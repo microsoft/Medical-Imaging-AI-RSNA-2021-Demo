@@ -77,3 +77,5 @@ provided by the bot. You will only need to do this once across all repositories 
 These are the ways to contribute:
 * [Submit bugs](https://github.com/microsoft/Medical-Imaging-AI-RSNA-2021-Demo/issues) and help us verify fixes as they are checked in.
 * Review the [source code changes](https://github.com/microsoft/Medical-Imaging-AI-RSNA-2021-Demo/pulls).
+
+Contact our team at medimagingaiinfo@microsoft.com for any additional questions.
