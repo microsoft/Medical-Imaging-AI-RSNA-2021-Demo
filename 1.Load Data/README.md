@@ -54,14 +54,14 @@ root
 
 
 ## Creating a Storage account and a blob container
-Creating a storage account and a blob container is easy. First, create the storage account following [this tutorial](https://docs.microsoft.com/en-us/azure/storage/common/storage-account-create?tabs=azure-portal). Second, create a new blob container by accessing the newly storage account, selecting `Container` in the left hand menu, and clicking `Create`, and finally follow the prompts.
+Creating a storage account and a blob container is easy. First, create the storage account following [this tutorial](https://docs.microsoft.com/en-us/azure/storage/common/storage-account-create?tabs=azure-portal). Second, create a new blob container by accessing the newly created storage account, selecting `Container` in the left hand menu, and clicking `Create`, then follow the prompts.
 
 ![Create Container](images/create-container-1.png)
 
 You can also create the blob container using Azure CLI with [az storage account create](https://docs.microsoft.com/en-us/cli/azure/azure-cli-reference-for-storage), or using AzCopy using the [azcopy make](https://docs.microsoft.com/en-us/azure/storage/common/storage-ref-azcopy-make?toc=/azure/storage/blobs/toc.json) command.
 
 ## Uploading data to Azure
-Next, we need to copy the extracted PADCHEST data into our newly created blob container.  This can be done easily using [Azure Storage Explorer](https://docs.microsoft.com/en-us/azure/vs-azure-tools-storage-explorer-blobs#managing-blobs-in-a-blob-container).  If you prefer to use CLI to copy the data this is accomplished with [AzCopy](https://docs.microsoft.com/en-us/azure/storage/common/storage-ref-azcopy-copy?toc=/azure/storage/blobs/toc.json). 
+Next, we need to copy the extracted PADCHEST data into our newly created blob container.  This can be done easily using [Azure Storage Explorer](https://docs.microsoft.com/en-us/azure/vs-azure-tools-storage-explorer-blobs#managing-blobs-in-a-blob-container).  If you prefer to use CLI to copy the data, this is accomplished with [AzCopy](https://docs.microsoft.com/en-us/azure/storage/common/storage-ref-azcopy-copy?toc=/azure/storage/blobs/toc.json). 
 
 ### Copying using AzCopy
 Before we can copy using AzCopy, we need to create a SAS token.  To do this, navigate to the blob container, then click `Shared access tokens`.
@@ -87,7 +87,7 @@ Now you are ready to [annotate your data](../2.Annotation/README.md)!
 
 ## Appendix - Uploading only a portion of PADCHEST
 
-Given the size of PADCHEST, you can save time in this tutorial by only using a portion of the dataset. To do this, only download/extract as few as only one of the individual zip files (make sure to maintain the folder structure mention above), then edit or create another version of the PADCHEST csv, e.g.: 
+Given the size of PADCHEST, you can save time in this tutorial by only using a portion of the dataset. To do this, only download and extract a portion of the files (i.e. an  individual zip file). When uploading, make sure to maintain the folder structure mention above. You will also need upload an edited copy of the csv file. This can be done manually or through a script such as the following: 
 ```python
 import pandas as pd
 fn = "<path/to/root>/PADCHEST_chest_x_ray_images_labels_160K_01.02.19.csv"
