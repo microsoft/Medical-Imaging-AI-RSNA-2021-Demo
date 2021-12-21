@@ -24,16 +24,16 @@ To obtain an azure storage key, navigate to the storage account that contains yo
 ![Access Keys](./images/access-keys.png)
 
 ### Creating a Datastore 
-Next, navigate back to the AzureML Studio and select `Datastores` in the menu on the left, then click `New Datastore`.  This will bring up a prompt, fill out the form and click `Create`.
+Next, navigate back to the AzureML Studio and select `Datastores` in the menu on the left, then click `New Datastore`.  This will bring up a prompt, fill out the form (including the account key), and click `Create`.
 
 ![Create Datastore](./images/create-datastore.jpg)
 
 ### Creating Dataset
-After creating a Datastore you can create a Dataset which allows fast access to the files for training/testing.  Go to `Datasets` from the AzureML Studio menu, then click `Create dataset`, and choose `From datastore` from the dropdown menu.
+After creating a Datastore, you can create a Dataset which allows fast access to the files for training/testing.  Go to `Datasets` from the AzureML Studio menu, then click `Create dataset`, and choose `From datastore` from the dropdown menu.
 
 ![Create Dataset](./images/create-dataset.jpg)
 
-Next, in the prompts that appear set the name to `padchest` (or any unique name), and Dataset type to `File` then click `Next`.  In the next menu, find and select the datastore that you previously created in the search bar and set the path to whereever you saved the files within the blob storage (probably `/`). Finally, Complete the remaining prompts to create the dataset.
+Next, in the prompts that appear set the name to `padchest` (or any unique name), and Dataset type to `File` then click `Next`.  In the following menu, find and select the datastore that you previously created in the search bar and set the path to the path within the blob container where the the files are stored (if you are following the tutorial, this path should be: `/`). Finally, Complete the remaining prompts to create the dataset.
 
 ![Create Dataset](./images/create-dataset-2.jpg)
 
@@ -52,9 +52,9 @@ os.environ["RSLEX_DIRECT_VOLUME_MOUNT"] = "true" # IMPORTANT for performance
 # workspace can be pulled from the environment
 workspace = Workspace.from_config()
 
-# Load workspace outside of azureML notebooks
-#subscription_id, resource_group, workspace_name = '<sub_id>', '<rg_name>', '<ws_name>
-workspace = Workspace(subscription_id, resource_group, workspace_name)
+# or Load workspace outside of azureML notebooks
+# subscription_id, resource_group, workspace_name = '<sub_id>', '<rg_name>', '<ws_name>
+# workspace = Workspace(subscription_id, resource_group, workspace_name)
 
 # Find specified dataset
 dataset_name = "padchest"
@@ -74,7 +74,7 @@ pc_df = pd.read_csv(pc_csv_file, low_memory=False, index_col=0)
 
 ## Create Labeling Project and Annotating Data
 
-> **Note:** This step is not required to complete this tutorial you can jump directly to the next steps to continue the tutorial.
+> **Note:** This step is not required to complete this tutorial you can jump directly to the next steps and continue the tutorial.
 
 Now that we have created a dataset, we can create a Labeling Project and start annotating data. For an indepth look at this process checkout the AzureML documentation on it [here](https://docs.microsoft.com/en-us/azure/machine-learning/tutorial-labeling). 
 
@@ -93,7 +93,7 @@ Continue to through the prompts, until the end and click `Create project`.
 
 ![Create Label Project](./images/create-label-project-4.jpg)
 
-The project can take sometime to create, especially if there are numerous files within the dataset. Once the project has been created the `State` will show `Running`.
+The project can take some time to create, especially if there are numerous files within the dataset. Once the project has been created the `State` will show `Running`.
 
 ![Create Label Project](./images/create-label-project-5.jpg)
 
@@ -111,7 +111,7 @@ From this page select `Label data`, review the instructions then click `Start la
 ![Instructions](./images/labeling-instr.png)
 
 
-From this page you can start annotating data based on the Label data type. Note that Azure ML supports regular (PNG/JPEG) images for annotations as well as DICOMs (only 2D, Xray modalities at the moment of writing):
+From this page you can start annotating data based on the Label data type. Note that Azure ML supports regular (PNG/JPEG) images for annotations as well as DICOMs (only 2D, Xray modalities at the time of writing):
 
 #### Segmentation
 ![Segmentation](./images/labeling-seg.png)
