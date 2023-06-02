@@ -2,7 +2,9 @@
 **Deployment scenario:** Submit a DICOM file (x-ray image) to the cloud and get a model prediction in real time.
 
 To deploy the model that was trained in the previous section ([3.Build a model](../3.Build%20a%20model/Readme.md), [training.ipynb](../3.Build%20a%20model/training.ipynb)) as a **web service hosted on Azure Container Instances (ACI)**
-, you need to open the [deploy.ipynb](./deploy.ipynb) Notebook in your Azure ML workspace and follow the steps below:
+, you need to open the [deploy-opti-sdk-v2.ipynb](./deploy-opti-sdk-v2.ipynb) Notebook in your Azure ML workspace and follow the steps below:
+
+Also, if you want to deploy locally, see [deploy-local-opti-sdk-v2.ipynb](./deploy-local-opti-sdk-v2.ipynb)
 
 ## Steps
 1. Prepare an entry script.
