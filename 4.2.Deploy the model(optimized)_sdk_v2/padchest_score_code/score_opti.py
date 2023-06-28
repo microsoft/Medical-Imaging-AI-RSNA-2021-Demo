@@ -3,7 +3,6 @@ from azureml.contrib.services.aml_response import AMLResponse
 import json, os, io
 import numpy as np
 import torch
-import intel_extension_for_pytorch as ipex
 import torchxrayvision as xrv
 from torchvision import transforms
 from torchxrayvision.datasets import normalize
@@ -14,30 +13,27 @@ from openvino.runtime import Core
 from openvino.runtime import get_version
 
 def init():
-    global bench_time
-    bench_time = 10  # benchmark time in sec
     global target_device
     target_device = "CPU"
 
     # Initial PyTorch model
-    global modelx
+    global model
     # AZUREML_MODEL_DIR is an environment variable created during deployment.
     # It is the path to the model folder (./azureml-models/$MODEL_NAME/$VERSION)
     # For multiple models, it points to the folder containing all deployed models (./azureml-models)
+    # Load PyTorch model
+    model = xrv.models.DenseNet(num_classes=26, in_channels=1, **xrv.models.get_densenet_params('densenet') )
     model_path = os.path.join(os.getenv('AZUREML_MODEL_DIR'), 'az-register-models', 'pc-densenet-densenet-best.pt')
-    # print(model_path)
-    modelx = torch.load(model_path)
-    modelx.eval()
-
-    # Initial PyTorch IPEX model
-    global ipex_modelx
-    global traced_model
-    ipex_modelx = ipex.optimize(modelx)
+    # model_path='./pc-densenet-densenet-best.pt'
+    model.load_state_dict(torch.load(model_path).state_dict() )
+        
+    model.eval()
 
     # Initialize OpenVINO Runtime.
     global ov_compiled_model
     ie = Core()
     ov_xml = os.path.join(os.getenv('AZUREML_MODEL_DIR'), 'az-register-models', 'pc-densenet-densenet-best.onnx')
+    # ov_xml = 'pc-densenet-densenet-best.onnx'
     # Load and compile the OV model
     ov_model = ie.read_model(ov_xml)
     ov_compiled_model = ie.compile_model(model=ov_model, device_name=target_device)
@@ -60,97 +56,161 @@ def run(request):
         # For a real-world solution, you would load the data from reqBody
         # and send it to the model. Then return the response.
         try:
-
             # For labels definition see file: '3.Build a model/trainingscripts/padchest_config.py'
             pathologies_labels = ['Air Trapping', 'Aortic Atheromatosis', 'Aortic Elongation', 'Atelectasis',
              'Bronchiectasis', 'Cardiomegaly', 'Consolidation', 'Costophrenic Angle Blunting', 'Edema', 'Effusion',
              'Emphysema', 'Fibrosis', 'Flattened Diaphragm', 'Fracture', 'Granuloma', 'Hemidiaphragm Elevation',
              'Hernia', 'Hilar Enlargement', 'Infiltration', 'Mass', 'Nodule', 'Pleural_Thickening',
              'Pneumonia', 'Pneumothorax', 'Scoliosis', 'Tuberculosis']
-            def benchmark_pt(test_image):
-                latency_arr = []
-                end = time.time() + int(bench_time)
 
-                print(f"\n==== Benchmarking PyTorch inference with Fake Data for {bench_time}sec on CPU ====")
-                print(f"Input shape: {test_image.shape}")
+            def benchmark_pt(data):
 
-                while time.time() < end:
-                    start_time = time.time()
-                    pt_result = modelx(test_image)
-                    latency = time.time() - start_time
-                    latency_arr.append(latency)
+                print(f"\n==== Benchmarking PyTorch inference with sample data for 10 warmup + 90 iters on CPU ====")
+                print(f"Input shape: {data.shape}")
 
+                durs = []
+                with torch.no_grad():
+                    for _ in range(100):
+                        start_time = time.time()
+                        pt_result = model(data)
+                        latency = time.time() - start_time
+                        durs.append(latency)
+                
                 # Process output
                 index = np.argsort( pt_result.data.cpu().numpy() )
                 probability = torch.nn.functional.softmax(pt_result[0], dim=0).data.cpu().numpy()
                 pt_result = get_top_predictions(index, probability)
 
-                avg_latency = np.array(latency_arr).mean()
+                avg_latency = np.mean(durs[10:])
                 fps = 1 / avg_latency
 
-                print(f"PyTorch Avg Latency: {avg_latency:.4f} sec, FPS: {fps:.2f}")
+                print(f"Stock PyTorch Avg Latency: {avg_latency:.4f} sec, FPS: {fps:.2f}")
 
-                #Return the result
+                # summarize the results
                 pt_summary = {
                     "fwk_version": f"PyTorch: {torch.__version__}",
                     "pt_result": pt_result,
                     "avg_latency": avg_latency,
                     "fps": fps
                 }
-                return pt_summary
 
-            def benchmark_ipex(test_image):
-                latency_arr = []
-                end = time.time() + int(bench_time)
-
+                # torchscript
                 with torch.no_grad():
-                    traced_model = torch.jit.trace(ipex_modelx, test_image)
+                    traced_model = torch.jit.trace(model, data)
                     traced_model = torch.jit.freeze(traced_model)
 
-                print(f"\n==== Benchmarking IPEX inference with Fake Data for {bench_time}sec on CPU ====")
-                print(f"Input shape: {test_image.shape}")
+                durs = []
+                with torch.no_grad():
+                    for _ in range(100):
+                        start_time = time.time()
+                        pt_graph_result = traced_model(input_batch)
+                        latency = time.time() - start_time
+                        durs.append(latency)
+                
+                # Process output
+                index = np.argsort( pt_graph_result.data.cpu().numpy() )
+                probability = torch.nn.functional.softmax(pt_graph_result[0], dim=0).data.cpu().numpy()
+                pt_graph_result = get_top_predictions(index, probability)
 
-                while time.time() < end:
-                    start_time = time.time()
-                    with torch.no_grad():
-                        ipex_result = traced_model(test_image)
-                    latency = time.time() - start_time
-                    latency_arr.append(latency)
+                avg_latency = np.mean(durs[10:])
+                fps = 1 / avg_latency
+
+                print(f"Stock PyTorch + TorchScript Avg Latency: {avg_latency:.4f} sec, FPS: {fps:.2f}")
+
+                # summarize the results
+                pt_graph_summary = {
+                    "fwk_version": f"PyTorch: {torch.__version__}",
+                    "pt_graph_result": pt_graph_result,
+                    "avg_latency": avg_latency,
+                    "fps": fps
+                }
+
+                return pt_summary, pt_graph_summary
+            
+            def benchmark_ipex(data):
+
+                print(f"\n==== Benchmarking IPEX inference with sample data for 10 warmup + 90 iters on CPU ====")
+                print(f"Input shape: {data.shape}")
+
+                # import ipex and optimize model
+                import intel_extension_for_pytorch as ipex
+                model_ipex = ipex.optimize(model)
+                
+                durs = []
+                with torch.no_grad():
+                    for _ in range(100):
+                        start_time = time.time()
+                        ipex_result = model_ipex(data)
+                        latency = time.time() - start_time
+                        durs.append(latency)
 
                 # Process output
                 index = np.argsort( ipex_result.data.cpu().numpy() )
                 probability = torch.nn.functional.softmax(ipex_result[0], dim=0).data.cpu().numpy()
                 ipex_result = get_top_predictions(index, probability)
 
-                avg_latency = np.array(latency_arr).mean()
+                avg_latency = np.mean(durs[10:])
                 fps = 1 / avg_latency
 
-                print(f"PyTorch Avg Latency: {avg_latency:.4f} sec, FPS: {fps:.2f}")
+                print(f"IPEX Avg Latency: {avg_latency:.4f} sec, FPS: {fps:.2f}")
 
-                #Return the result
+                # summarize the results
                 ipex_summary = {
                     "fwk_version": f"IPEX: {ipex.__version__}",
                     "ipex_result": ipex_result,
                     "avg_latency": avg_latency,
                     "fps": fps
                 }
-                return ipex_summary
 
-            def benchmark_ov(test_image):
+                # torchscript
+                with torch.no_grad():
+                    traced_model = torch.jit.trace(model_ipex, data)
+                    traced_model = torch.jit.freeze(traced_model)
+
+                durs = []
+                with torch.no_grad():
+                    for _ in range(100):
+                        start_time = time.time()
+                        ipex_graph_result = traced_model(data)
+                        latency = time.time() - start_time
+                        durs.append(latency)
+                
+                # Process output
+                index = np.argsort( ipex_graph_result.data.cpu().numpy() )
+                probability = torch.nn.functional.softmax(ipex_graph_result[0], dim=0).data.cpu().numpy()
+                ipex_graph_result = get_top_predictions(index, probability)
+
+                avg_latency = np.mean(durs[10:])
+                fps = 1 / avg_latency
+
+                print(f"IPEX graph mode Avg Latency: {avg_latency:.4f} sec, FPS: {fps:.2f}")
+
+                # summarize the results
+                ipex_graph_summary = {
+                    "fwk_version": f"IPEX: {ipex.__version__}",
+                    "ipex_graph_result": ipex_graph_result,
+                    "avg_latency": avg_latency,
+                    "fps": fps
+                }
+                
+                return ipex_summary, ipex_graph_summary
+            
+            def benchmark_ov(data):
+
+                print(f"\n==== Benchmarking OpenVINO inference with sample data for 10 warmup + 90 iters on CPU ====")
+                print(f"Input shape: {data.shape}")
+
                 # get the names of input and output layers of the model
                 input_layer = ov_compiled_model.input(0)
                 output_layer =ov_compiled_model.output(0)
-
-                latency_arr = []
-                end = time.time() + int(bench_time)
-                print(f"\n==== Benchmarking OpenVINO {bench_time}sec on {target_device} ====")
-                print(f"Input shape: {test_image.shape}")
-
-                while time.time() < end:
-                    start_time = time.time()
-                    ov_output = ov_compiled_model([test_image])
-                    latency = time.time() - start_time
-                    latency_arr.append(latency)
+                
+                durs = []
+                with torch.no_grad():
+                    for _ in range(100):
+                        start_time = time.time()
+                        ov_output = ov_compiled_model(data)
+                        latency = time.time() - start_time
+                        durs.append(latency)
 
                 # Process output
                 ov_output = ov_output[output_layer]
@@ -158,18 +218,47 @@ def run(request):
                 probability = torch.nn.functional.softmax(torch.from_numpy(ov_output[0]), dim=0).data.cpu().numpy()
                 ov_result = get_top_predictions(index, probability)
 
-                avg_latency = np.array(latency_arr).mean()
+                avg_latency = np.mean(durs[10:])
                 fps = 1 / avg_latency
 
                 print(f"OpenVINO Avg Latency: {avg_latency:.4f} sec, FPS: {fps:.2f}")
 
+                # summarize the results
                 ov_summary = {
                     "fwk_version": f"OpenVINO: {get_version()}",
                     "ov_result": ov_result,
                     "avg_latency": avg_latency,
                     "fps": fps
                 }
+
                 return ov_summary
+            
+
+            # Get System information
+            def get_system_info():
+                import subprocess
+
+                # Run lscpu command and capture output
+                lscpu_out = subprocess.check_output(["lscpu"]).decode("utf-8")
+                print(lscpu_out)
+                # Run free -g command and capture output
+                mem_out = subprocess.check_output(["free", "-g"]).decode("utf-8")
+                print(mem_out)
+                os_out = subprocess.check_output(["cat", "/etc/os-release"]).decode(
+                    "utf-8"
+                )
+                kernal_out = subprocess.check_output(["uname", "-a"]).decode("utf-8")
+                pyver_out = subprocess.check_output(["which", "python"]).decode("utf-8")
+                os_out = os_out + " \n" + kernal_out + "\n" + pyver_out
+                print(os_out)
+
+                return_data = {
+                    "lscpu_out": lscpu_out,
+                    "mem_out_gb": mem_out,
+                    "os": os_out,
+                }
+                return return_data
+
 
             # Read DICOM and apply photometric transformations
             def read_and_rescale_image( filepath):
@@ -187,7 +276,7 @@ def run(request):
                 # Scales 16bit to [-1024 1024]
                 image = normalize(image, maxval=65535, reshape=True)
                 return image
-
+            
             # Decode output and get predictions
             def get_top_predictions(index, probability, num_predictions=3):
                 # For labels definition see file: '3.Build a model/trainingscripts/padchest_config.py'
@@ -206,38 +295,12 @@ def run(request):
                 result = {"top_labels": top_labels, "top_probabilities": top_probs}
                 return result
 
-            # Get System information
-            def get_system_info():
-                import subprocess
-
-
-                # Run lscpu command and capture output
-                lscpu_out = subprocess.check_output(['lscpu']).decode('utf-8')
-                print(lscpu_out)
-                # Run free -g command and capture output
-                mem_out = subprocess.check_output(['free', '-g']).decode('utf-8')
-                print(mem_out)
-                os_out = subprocess.check_output(['cat', '/etc/os-release']).decode('utf-8')
-                kernal_out = subprocess.check_output(['uname', '-a']).decode('utf-8')
-                pyver_out = subprocess.check_output(['which', 'python']).decode('utf-8')
-                os_out = os_out + " \n" + kernal_out + "\n" + pyver_out
-                print(os_out)
-                fwk_versions = {"PyTorch": torch.__version__,"IPEX" : ipex.__version__ , "OpenVINO": get_version()}
-                print(fwk_versions)
-
-                return_data = {
-                    "lscpu_out": lscpu_out,
-                    "mem_out_gb": mem_out,
-                    "fwk_versions": fwk_versions,
-                    "os": os_out
-                }
-                return return_data
-
-            #
-            # Start Processing
-            #
+            ######################################
+            # Begin processing request
+            ######################################
+            
             file_bytes = request.files["image"]
-
+            
             # Note that user can define this to be any other type of image
             input_image = read_and_rescale_image(file_bytes)
 
@@ -250,12 +313,14 @@ def run(request):
             input_batch =  torch.from_numpy( input_image[np.newaxis,...] )
 
             #Benchmark PyTorch
-            pt_summary = benchmark_pt(input_batch)
+            pt_summary, pt_graph_summary = benchmark_pt(input_batch)
             print(f"PyTorch Output: {pt_summary}")
+            print(f"PyTorch Graph Output: {pt_graph_summary}")
 
             #Benchmark IPEX
-            ipex_summary = benchmark_ipex(input_batch)
-            print(f"IPEX Output: {ipex_summary}")
+            ipex_summary, ipex_graph_summary = benchmark_ipex(input_batch)
+            print(f"IPEX Eager Output: {ipex_summary}")
+            print(f"IPEX Graph Output: {ipex_graph_summary}")
 
             # Benchmark OpenVINO
             ov_summary = benchmark_ov(input_batch)
@@ -264,7 +329,9 @@ def run(request):
             sys_info = get_system_info()
 
             return_data = {"pt_summary": pt_summary,
-            "ipex_summary" : ipex_summary,
+            "pt_graph_summary" : pt_graph_summary,
+            "ipex_eager_summary" : ipex_summary,
+            "ipex_graph_summary" : ipex_graph_summary,
             "ov_summary": ov_summary,
             "system_info": sys_info}
 
