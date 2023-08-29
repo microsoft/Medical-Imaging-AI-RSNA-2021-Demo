@@ -1,0 +1,17 @@
+channels:
+  - anaconda
+  - defaults
+dependencies:
+  - python=3.9
+  - pip
+  - pip:
+      - azureml-defaults
+      - azure-ml-api-sdk
+      - torchxrayvision
+      - pydicom
+      - openvino-dev
+      - torch==1.13.1+cpu
+      - torchvision==0.14.1+cpu
+      - intel_extension_for_pytorch==1.13.100
+      - "--index-url https://pypi.org/simple/"
+      - "--extra-index-url https://download.pytorch.org/whl/cpu"
